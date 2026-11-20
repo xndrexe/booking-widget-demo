@@ -4,3 +4,4 @@ __pycache__/
 data/bookings.json
 data/*.tmp
 build/
+runlogs/
