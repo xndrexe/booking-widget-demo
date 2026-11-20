@@ -1,0 +1,83 @@
+<style>
+body{margin:0;padding:12px 12px 10px;font:15px/1.35 system-ui}
+.h{font-weight:600;font-size:17px}
+.s{color:var(--tg-theme-hint-color);font-size:13px}
+.l{color:var(--tg-theme-hint-color);font-size:12px;text-transform:uppercase;letter-spacing:.04em;margin:12px 0 6px}
+.r{display:flex;flex-wrap:wrap;gap:6px}
+.g{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.c{border:0;border-radius:10px;padding:7px 10px;font:inherit;font-size:14px;line-height:1.2;text-align:left;
+background:var(--tg-theme-secondary-bg-color);color:var(--tg-theme-text-color);cursor:pointer}
+.g .c{text-align:center}
+.c small{display:block;color:var(--tg-theme-hint-color);font-size:12px}
+.c.on{background:var(--tg-theme-button-color);color:var(--tg-theme-button-text-color)}
+.c.on small{color:inherit;opacity:.85}
+.c[disabled]{opacity:.35;text-decoration:line-through}
+.go{display:block;width:100%;margin-top:12px;border:0;border-radius:10px;padding:11px;font:inherit;font-weight:600;
+background:var(--tg-theme-button-color);color:var(--tg-theme-button-text-color)}
+.go[disabled]{opacity:.45}
+.go.alt{background:var(--tg-theme-secondary-bg-color);color:var(--tg-theme-destructive-text-color)}
+.e{color:var(--tg-theme-destructive-text-color);font-size:13px;margin-top:8px}
+.st{text-align:center;padding:6px 0 2px}
+.ic{font-size:34px;line-height:1}
+.ok .ic{color:#31b545}
+.card{margin-top:10px;border-radius:10px;padding:9px 11px;background:var(--tg-theme-secondary-bg-color);font-size:14px}
+.card div{display:flex;justify-content:space-between;gap:8px;padding:2px 0}
+.card span{color:var(--tg-theme-hint-color)}
+</style>
+<div id="a"></div>
+<script>
+const W=window.TelegramWidget,C=/*CATALOG*/{};
+const $=document.getElementById('a');
+let S={},sel={},err='',again=false,wait=false;
+try{sel=JSON.parse(localStorage.getItem('sel')||'{}')}catch(e){}
+const svc=id=>C.services.find(x=>x.id==id),mas=id=>C.masters.find(x=>x.id==id);
+const rub=n=>n.toLocaleString('ru-RU')+' ₽';
+const hm=t=>t.slice(0,2)+':'+t.slice(2);
+function dl(d,i){if(i==0)return'Сегодня';if(i==1)return'Завтра';
+const x=new Date(new Date().getFullYear(),+d.slice(0,2)-1,+d.slice(2));
+return x.toLocaleDateString('ru-RU',{weekday:'short',day:'numeric'})}
+function sd(d){return dt(d).toLocaleDateString('ru-RU',{day:'numeric',month:'short'})}
+function dt(d){return new Date(new Date().getFullYear(),+d.slice(0,2)-1,+d.slice(2))}
+function dn(d){const x=new Date(new Date().getFullYear(),+d.slice(0,2)-1,+d.slice(2));
+return x.toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'})}
+function load(){try{S=JSON.parse(W.chatData)||{}}catch(e){S={}}}
+function save(){try{localStorage.setItem('sel',JSON.stringify(sel))}catch(e){}}
+function busy(m,d,t){return((S.busy||{})[m+':'+d]||[]).includes(t)}
+function chip(k,v,on,txt,sub,off){return`<button class="c${on?' on':''}" data-k="${k}" data-v="${v}"${off?' disabled':''}>${txt}${sub?`<small>${sub}</small>`:''}</button>`}
+function card(b){const s=svc(b.svc);return`<div class="card"><div><span>Услуга</span>${s.name}</div><div><span>Мастер</span>${mas(b.m).name}</div><div><span>Когда</span>${dn(b.d)}, ${hm(b.t)}</div><div><span>Стоимость</span>${rub(s.price)}</div>${b.n?`<div><span>Номер записи</span>${b.n}</div>`:''}</div>`}
+function form(){
+const days=S.days||[];if(sel.d&&!days.includes(sel.d))sel.d=0;if(!sel.d&&days[0])sel.d=days[0];
+const ms=C.masters.filter(m=>sel.s&&m.services.includes(sel.s));if(sel.m&&!ms.some(m=>m.id==sel.m))sel.m=0;
+if(sel.t&&busy(sel.m,sel.d,sel.t))sel.t=0;
+let h=`<div class="h">Запись онлайн</div><div class="s">${C.salon}</div><div class="l">Услуга</div><div class="r">`+
+C.services.map(s=>chip('s',s.id,sel.s==s.id,s.name,`${rub(s.price)} · ${s.min} мин`)).join('')+'</div>';
+if(sel.s)h+='<div class="l">Мастер</div><div class="r">'+ms.map(m=>chip('m',m.id,sel.m==m.id,m.name)).join('')+'</div>';
+if(sel.m){h+='<div class="l">День</div><div class="r">'+days.map((d,i)=>chip('d',d,sel.d==d,dl(d,i),i<2?sd(d):'')).join('')+'</div>';
+const hs=C.hours.map(x=>x.replace(':',''));
+h+='<div class="l">Время</div>'+(hs.every(t=>busy(sel.m,sel.d,t))?'<div class="s">На этот день всё занято — выберите другой</div>':
+'<div class="g">'+hs.map(t=>chip('t',t,sel.t==t,hm(t),'',busy(sel.m,sel.d,t))).join('')+'</div>')}
+const ready=sel.s&&sel.m&&sel.d&&sel.t;
+h+=`<button class="go" data-k="go"${ready&&!wait?'':' disabled'}>${wait?'Записываем…':ready?'Записаться · '+rub(svc(sel.s).price):'Выберите услугу, мастера и время'}</button>`;
+return h}
+function status(b){
+const v={wait:['⏳','Заявка отправлена','Салон подтвердит её в течение пары минут'],ok:['✓','Вы записаны','Ждём вас в салоне'],
+no:['✕','Салон не подтвердил время','Выберите другое время'],cancel:['↺','Запись отменена','Время освободилось']}[b.s];
+let h=`<div class="st ${b.s}"><div class="ic">${v[0]}</div><div class="h">${v[1]}</div><div class="s">${v[2]}</div></div>`+card(b);
+h+=b.s=='wait'||b.s=='ok'?`<button class="go alt" data-k="x"${wait?' disabled':''}>Отменить запись</button>`:'<button class="go" data-k="again">Записаться снова</button>';
+return h}
+function render(){const b=S.bk;$.innerHTML=(b&&!(again&&(b.s=='no'||b.s=='cancel'))?status(b):form())+(err?`<div class="e">${err}</div>`:'')}
+function ask(q){wait=true;err='';render();
+W.request(q).then(a=>{wait=false;let r={};try{r=JSON.parse(a.result)||{}}catch(e){}
+if(r.busy){S.busy=r.busy;if(r.days)S.days=r.days}if(r.err)err=r.err;if(r.ok)again=false;render()},
+e=>{wait=false;err=e.code=='RATE_LIMITED'?'Слишком часто — подождите пару секунд':'Нет связи с ботом, попробуйте ещё раз';render()})}
+$.addEventListener('click',ev=>{const t=ev.target.closest('button');if(!t||t.disabled)return;const k=t.dataset.k,v=t.dataset.v;
+if(k=='go')return ask(`b:${sel.s}:${sel.m}:${sel.d}:${sel.t}`);
+if(k=='x')return ask('x');
+if(k=='again'){again=true;sel.t=0;save();return render()}
+W.HapticFeedback.selectionChanged();
+if(k=='s'){sel={s:+v,d:sel.d}}else if(k=='m'){sel.m=+v;sel.t=0}else if(k=='d'){sel.d=v;sel.t=0}else sel.t=v;
+err='';save();render()});
+function refresh(){if(W.isActive&&!wait)W.request('r').then(a=>{try{const r=JSON.parse(a.result);if(r.busy){S.busy=r.busy;S.days=r.days;render()}}catch(e){}},()=>{})}
+W.onEvent('chatDataChanged',()=>{load();render()});
+load();render();W.ready();refresh();setInterval(refresh,30000);
+</script>
