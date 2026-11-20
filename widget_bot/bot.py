@@ -152,6 +152,9 @@ class Bot:
             )
 
     async def run(self) -> None:
+        me = await self.api("getMe")
+        mode = "set" if self.admin_chat is not None else "none (autoconfirm)"
+        log.info("started @%s admin_chat=%s", me.get("username"), mode)
         offset = 0
         while True:
             try:
